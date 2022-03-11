@@ -112,6 +112,7 @@ def generateText(n, startIndex, i, month, day, dow, num):
       return f'{month}/{day}（{dow}）_{startTime}:00〜{endTime}:00 @{court}{num}面'
 
 def main():
+
     # 処理時間計測①：開始
     start_time = time.perf_counter()
 
@@ -275,13 +276,17 @@ def main():
                         else:
                             # 要修正
                             print('フォーマット違う')
+                print('5') # ここまでOK
                 
-                next_btn = driver.find_element(by=By.XPATH, value=f'//*[@id="contents"]/div[2]/div/ul/li[2]/a[1]')
-                next_btn_style = next_btn.get_attribute("style")
-                if len(next_btn_style) > 0:
-                    break
+                next_btn = driver.find_elements(by=By.XPATH, value=f'//*[@id="contents"]/div[2]/div/ul/li[2]/a[1]')
+                if len(next_btn) > 0:
+                    next_btn_style = next_btn[0].get_attribute("style")
+                    if len(next_btn_style) > 0:
+                        break
+                    else:
+                        next_btn[0].click()
                 else:
-                    next_btn.click()
+                    break
                 # ループここまで
 
             print(result)
@@ -294,7 +299,7 @@ def main():
                 date2 = item.split('_')[0]
                 others = item.split('_')[1]
                 if others[0] == '0':
-                    others = others[1:-1]
+                    others = others[1:]
                 if date1 == date2:
                     final_result.append(others)
                 else:
@@ -349,6 +354,7 @@ def main():
         except Exception as e:
             # import traceback
             # traceback.print_exc()
+            print(e)
             if i == 2:
                 err_title = e.__class__.__name__ # エラータイトル
                 message = f'例外発生！\n\n{err_title}\n{e.args}'
