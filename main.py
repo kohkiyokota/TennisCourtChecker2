@@ -276,7 +276,6 @@ def main():
                         else:
                             # 要修正
                             print('フォーマット違う')
-                print('5') # ここまでOK
                 
                 next_btn = driver.find_elements(by=By.XPATH, value=f'//*[@id="contents"]/div[2]/div/ul/li[2]/a[1]')
                 if len(next_btn) > 0:
@@ -323,12 +322,93 @@ def main():
                 writeSheet(final_result)
                 # LINE通知
                 message = '\n【テニスコート空き状況：江東】\n'
-                for item2 in final_result:
-                    #日付なら改行入れる
-                    if '〜' not in item2:
-                        message += '\n'
-                    message += f'{item2}\n'
-                send_line_notify(message)
+                message2 = '\n\n'
+                message3 = '\n\n'
+                message4 = '\n\n'
+
+                if len(final_result) > 120:
+                    m1 = final_result[0:40]
+                    for item2 in m1:
+                        #日付なら改行入れる
+                        if '〜' not in item2:
+                            message += '\n'
+                        message += f'{item2}\n'
+                    send_line_notify(message)
+
+                    m2 = final_result[40:80]
+                    for item2 in m2:
+                        #日付なら改行入れる
+                        if '〜' not in item2:
+                            message2 += '\n'
+                        message2 += f'{item2}\n'
+                    send_line_notify(message2)
+
+                    m3 = final_result[80:120]
+                    for item2 in m3:
+                        #日付なら改行入れる
+                        if '〜' not in item2:
+                            message3 += '\n'
+                        message3 += f'{item2}\n'
+                    send_line_notify(message3)
+
+                    m4 = final_result[120:]
+                    for item2 in m4:
+                        #日付なら改行入れる
+                        if '〜' not in item2:
+                            message4 += '\n'
+                        message4 += f'{item2}\n'
+                    send_line_notify(message4)
+
+                elif len(final_result) > 80:
+                    m1 = final_result[0:40]
+                    for item2 in m1:
+                        #日付なら改行入れる
+                        if '〜' not in item2:
+                            message += '\n'
+                        message += f'{item2}\n'
+                    send_line_notify(message)
+
+                    m2 = final_result[40:80]
+                    for item2 in m2:
+                        #日付なら改行入れる
+                        if '〜' not in item2:
+                            message2 += '\n'
+                        message2 += f'{item2}\n'
+                    send_line_notify(message2)
+
+                    m3 = final_result[80:]
+                    for item2 in m3:
+                        #日付なら改行入れる
+                        if '〜' not in item2:
+                            message3 += '\n'
+                        message3 += f'{item2}\n'
+                    send_line_notify(message3)
+
+                elif len(final_result) > 40:
+                    m1 = final_result[0:40]
+                    for item2 in m1:
+                        #日付なら改行入れる
+                        if '〜' not in item2:
+                            message += '\n'
+                        message += f'{item2}\n'
+                    send_line_notify(message)
+
+                    m2 = final_result[40:]
+                    for item2 in m2:
+                        #日付なら改行入れる
+                        if '〜' not in item2:
+                            message2 += '\n'
+                        message2 += f'{item2}\n'
+                    send_line_notify(message2)
+
+                else:
+                    for item2 in final_result:
+                        #日付なら改行入れる
+                        if '〜' not in item2:
+                            message += '\n'
+                        message += f'{item2}\n'
+                    send_line_notify(message)
+
             # コートに空きがない場合
             elif len(final_result) == 0:
                 print('空きなし：通知あり')
