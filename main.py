@@ -47,7 +47,7 @@ worksheet = spreadsheet.worksheet('江東区スポーツネット') # シート�
 # Headless Chromeをあらゆる環境で起動させるオプション
 # 省メモリ化しないとメモリ不足でクラッシュする
 options = Options()
-# options.add_argument('--headless')
+options.add_argument('--headless')
 options.add_argument('--disable-gpu')
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
