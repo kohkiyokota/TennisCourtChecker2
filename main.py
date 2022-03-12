@@ -47,7 +47,7 @@ worksheet = spreadsheet.worksheet('江東区スポーツネット') # シート�
 # Headless Chromeをあらゆる環境で起動させるオプション
 # 省メモリ化しないとメモリ不足でクラッシュする
 options = Options()
-options.add_argument('--headless')
+# options.add_argument('--headless')
 options.add_argument('--disable-gpu')
 options.add_argument('--no-sandbox')
 options.add_argument('--disable-dev-shm-usage')
@@ -188,7 +188,7 @@ def main():
             # ###################################
             today = datetime.today()
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            today_year =  int('20' + datetime.strftime(today, '%y'))
+            today_year =  int('20' + datetime.strftime(today, '%Y'))
             today_month = datetime.strftime(today, '%m')
             if today_month[0] == '0':
               today_month = today_month[1:2]
