@@ -188,15 +188,20 @@ def main():
             # ###################################
             today = datetime.today()
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            today_year =  int('20' + datetime.strftime(today, '%Y'))
+            today_year =  int(datetime.strftime(today, '%Y'))
+            print(today_year)
+
             today_month = datetime.strftime(today, '%m')
             if today_month[0] == '0':
               today_month = today_month[1:2]
             today_month = int(today_month)
+            print(today_month)
+
             today_day = datetime.strftime(today, '%d')
             if today_day[0] == '0':
               today_day = today_day[1:2]
             today_day = int(today_day)
+            print(today_day)
 
             if today_day < 10:
                 print('今月まで')
