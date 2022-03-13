@@ -263,8 +263,9 @@ def main():
                 for n in range(7):
                     for i in range(endIndex - startIndex + 1):
                         tagname = 'thead'
-                        WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, tagname)))
+                        WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.TAG_NAME, tagname)))
                         checkRows = len(driver.find_elements(by=By.TAG_NAME, value=tagname))
+
                         if checkRows == 2:
                             if i + 1 != endIndex - startIndex + 1:
                                 xpath = f'//*[@id="td1{n + 1}_{startIndex + i}"]'
