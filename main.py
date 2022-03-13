@@ -214,7 +214,9 @@ def main():
 
             while True:
                 #日付：令和04年03月10日(木)
-                date = driver.find_element(by=By.XPATH, value='//*[@id="contents"]/div[2]/div/h3/span').text
+                xpath = '//*[@id="contents"]/div[2]/div/h3/span'
+                WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                date = driver.find_element(by=By.XPATH, value=xpath).text
                 year = int(date[2:4]) + 2018
                 month = int(date[5:7])
                 day = int(date[8:10])
@@ -260,19 +262,29 @@ def main():
                 # テーブルのセルの情報を取得
                 for n in range(7):
                     for i in range(endIndex - startIndex + 1):
-                        checkRows = len(driver.find_elements(by=By.TAG_NAME, value="thead"))
+                        tagname = 'thead'
+                        WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, tagname)))
+                        checkRows = len(driver.find_elements(by=By.TAG_NAME, value=tagname))
                         if checkRows == 2:
                             if i + 1 != endIndex - startIndex + 1:
-                                cell_text = driver.find_element(by=By.XPATH, value=f'//*[@id="td1{n + 1}_{startIndex + i}"]').text
+                                xpath = f'//*[@id="td1{n + 1}_{startIndex + i}"]'
+                                WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                                cell_text = driver.find_element(by=By.XPATH, value=xpath).text
                                 if cell_text != 'Ｘ':
-                                    img = driver.find_element(by=By.XPATH, value=f'//*[@id="td1{n + 1}_{startIndex + i}"]/a/img')
+                                    xpath = f'//*[@id="td1{n + 1}_{startIndex + i}"]/a/img'
+                                    WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                                    img = driver.find_element(by=By.XPATH, value=xpath)
                                     num = img.get_attribute('src')[-5:-4] # 空きコート数
                                     r = generateText(n, startIndex, i, month, day, dow, num)
                                     result.append(r)
                             else:
-                                cell_text = driver.find_element(by=By.XPATH, value=f'//*[@id="td1{n + 1}_{startIndex + i}"]').get_attribute("textContent")
+                                xpath = f'//*[@id="td1{n + 1}_{startIndex + i}"]'
+                                WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                                cell_text = driver.find_element(by=By.XPATH, value=xpath).get_attribute("textContent")
                                 if cell_text != 'Ｘ':
-                                    img = driver.find_element(by=By.XPATH, value=f'//*[@id="td1{n + 1}_{startIndex + i}"]/a/img')
+                                    xpath = f'//*[@id="td1{n + 1}_{startIndex + i}"]/a/img'
+                                    WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                                    img = driver.find_element(by=By.XPATH, value=xpath)
                                     num = img.get_attribute('src')[-5:-4] # 空きコート数
                                     r = generateText(n, startIndex, i, month, day, dow, num)
                                     result.append(r)
@@ -280,7 +292,9 @@ def main():
                             # 要修正
                             print('フォーマット違う')
                 
-                next_btn = driver.find_elements(by=By.XPATH, value=f'//*[@id="contents"]/div[2]/div/ul/li[2]/a[1]')
+                xpath = f'//*[@id="contents"]/div[2]/div/ul/li[2]/a[1]'
+                WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.XPATH, xpath)))
+                next_btn = driver.find_elements(by=By.XPATH, value=xpath)
                 if len(next_btn) > 0:
                     next_btn_style = next_btn[0].get_attribute("style")
                     if len(next_btn_style) > 0:
