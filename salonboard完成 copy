@@ -1,0 +1,227 @@
+// メール振り分け処理（送信元がyoyaku_system@salonboard.com）
+// Gmail内の受信メールを判別振り分け（ラベル付与）処理を行う
+const SortMailSalonboard = () => {
+  const searchFrom = "from:yoyaku_system@salonboard.com"; //送信アドレス
+  const searchLabel = "label:inbox"; //ラベル条件：受信ボックス
+  const reserve = []
+
+  const threads = GmailApp.search(`${searchFrom} ${searchLabel}`); // HPBのメールを読み取る
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const analysisSheet = ss.getSheetByName("新規予約一覧");
+  const analysisSheetLastRow = analysisSheet.getDataRange().getLastRow();
+
+  const lastCol = analysisSheet.getLastColumn();
+  for(var c = 0; c < lastCol; c++) {
+    reserve.push("")
+  }
+
+  // 各項目の列番号を取得
+  const idRow = 4; // IDの記載された行番号
+  const dat = analysisSheet.getRange(idRow, 1, 1, lastCol).getValues().flat(); // IDの並びを最終列まで取得
+  reserveNumCol = findCol('$reserveNum$', dat)                   // 予約番号($reserveNum$)を取得
+  reserveProceduralDay = findCol('$reserveProceduralDay$', dat)  // 予約手続日時（$reserveProceduralDay$）
+  firstReserveDay = findCol('$1stReserveDay$', dat)              // 予約日時($1stReserveDay$)
+  firstShopId = findCol('$1stShopId$', dat)                      // 予約店舗（$1stShopId$）
+  cusNum = findCol('$cusNum$', dat)                              // 会員番号（$cusNum$）
+  cusName = findCol('$cusName$', dat)                            // 名前（$cusName$）
+  cusTel = findCol('$cusTel$', dat)                              // 電話番号（$cusTel$）
+  cusBirthDay = findCol('$cusBirthDay$', dat)                    // 生年月日（$cusBirthDay$）
+  cusAge = findCol('$cusAge$', dat)                              // "来店時 年齢"（$cusAge$）
+  visitStatus = findCol('$visitStatus$', dat)                    // 来店ステータス（$visitStatus$）
+  firstSt = findCol('$1stSt$', dat)                              // 初回担当者（$1stSt$）
+
+  // ラベルIDを取得
+  var labelExisting = ''
+  var labelNew = '';
+  const labels = listLabels().labels
+  for(var l in labels) {
+    if(labels[l].name == "HPB_新規") {
+      labelNew = labels[l].id
+    }
+    else if(labels[l].name == "HPB_既存") {
+      labelExisting = labels[l].id
+    }
+  }
+
+  // スレッドごとにチェック
+  for(let i in threads.reverse()){
+    // スレッド内のメッセージを取得
+    const messages = GmailApp.getMessagesForThread(threads[i]);
+
+    // メッセージごとに処理
+    for(let m in messages) {
+        const message = messages[m]
+        const plainBody = message.getPlainBody();  // メッセージ内容
+        const messageTitle = message.getSubject(); // タイトル（件名）
+
+        const messageObject = Gmail.Users.Messages.get('me', message.getId())
+        // すでにタグがついているのは処理しない
+        if (!messageObject.labelIds.includes(labelNew) && !messageObject.labelIds.includes(labelExisting)) {
+
+            // /////////////////////////////////////////////////////////////////
+            // メニューに会員様が含まれている：Yes
+            // /////////////////////////////////////////////////////////////////
+            if(plainBody.match("会員様専用予約")) {
+                // HPB_既存ラベルをつけてアーカイブ
+                // message.getThread().addLabel(labelExisting).markRead().moveToArchive();
+                addLabel(labelExisting, 'me', message.getId()); // ラベルを付与
+                message.getThread().markRead().moveToArchive(); // 既読にして、アーカイブ
+            }
+
+            // /////////////////////////////////////////////////////////////////
+            // メニューに会員様が含まれていない　かつ　件名が予約連絡 / キャンセル連絡
+            // /////////////////////////////////////////////////////////////////
+            else if(
+              messageTitle.match("予約連絡") || messageTitle.match("キャンセル連絡")
+            ) {
+                console.log(messageTitle); // 件名をログ出力
+
+                reserve[reserveProceduralDay] = (message.getDate()); // 予約手続き日時を取得
+                const listSheet = ss.getSheetByName("プルダウンリスト");
+                const listSheetLastRow = listSheet.getDataRange().getLastRow();
+                const storeList = listSheet.getRange(3, 2, listSheetLastRow, 1).getValues().flat(); // 店舗リストの配列を生成
+                const gmailText = plainBody.split("\n");  // 本文を改行で分割して配列を生成
+
+                // タイトルが「予約連絡」の場合
+                if (messageTitle.match("予約連絡")){ 
+                    // 新規予約(処理④発動)
+                    const arrReserve = arrGmailText2(gmailText, reserve, storeList);      // メールからデータを取得しIDの順番に配列化
+                    const newLastRow = analysisSheet.getRange(analysisSheetLastRow, 2).getNextDataCell(SpreadsheetApp.Direction.UP).getRow() + 1;
+
+                    for (let y = 0; y < arrReserve.length; y++) {
+                      // データ入ってなかったら元のデータ（関数を入れる）
+                      if(arrReserve[y] == '') {
+                          var formura = analysisSheet.getRange(newLastRow, y + 1).getFormula()
+                          arrReserve[y] = formura
+                      }
+                    }
+
+                    // 直近のセルにデータがすでに入っていないか確認(重複処理防止用)
+                    const reserveNums = analysisSheet.getRange(newLastRow - 10, reserveNumCol + 1, 20, 1).getValues().reverse().flat();
+                    // 直近のセルに同じ番号が入っていなければ追記
+                    if (!reserveNums.includes(arrReserve[reserveNumCol])) {
+                        // 最終行に新規予約挿入
+                        analysisSheet.getRange(newLastRow, 1, 1, lastCol).setValues([arrReserve]);
+                        // 電話対応履歴に追加
+                        setTel(reserve[reserveNumCol])
+                    } else {
+                      console.log('処理が重複しています。')
+                    }
+
+
+                    // HPB_新規ラベルをつけてアーカイブ
+                    // message.getThread().addLabel(labelNew).markRead().moveToArchive();
+                    addLabel(labelNew, 'me', message.getId());      // ラベルを付与
+                    message.getThread().markRead().moveToArchive(); // 既読にして、アーカイブ
+                }
+                // タイトルが「キャンセル連絡」の場合
+                else if (messageTitle.match("キャンセル連絡")){ 
+                    // 予約キャンセル(処理⑤発動)
+                    const arrReserve = arrGmailText2(gmailText, reserve, storeList);      // メールからデータを取得しIDの順番に配列化
+                    arrReserve[visitStatus] = "×(予約キャンセル)"
+                    arrReserve[firstSt]     = "9999_自動システム"
+                    const newLastRow = analysisSheet.getRange(analysisSheetLastRow, 2).getNextDataCell(SpreadsheetApp.Direction.UP).getRow() + 1;
+
+                    // シート上に予約番号があるか配列で確認した後処理
+                    const reserveNumbers = analysisSheet.getRange(6, reserveNumCol + 1, newLastRow - 6, 1).getValues().reverse().flat();
+
+                    loop: for(let n in reserveNumbers){
+                      if(reserveNumbers[n] == reserve[reserveNumCol]){
+                        for(let a = newLastRow; a >= 6; a--){
+                          if(analysisSheet.getRange(a, reserveNumCol + 1).getValue() == reserve[reserveNumCol]){
+                            // 日時だけ書き換えないから別変数に入れて、arrReserveを書き換える
+                            const rd = analysisSheet.getRange(a, reserveProceduralDay + 1).getValue()
+                            arrReserve[reserveProceduralDay] = rd
+
+                            for (let y = 0; y < arrReserve.length; y++) {
+                              // データ入ってなかったら元のデータ（関数を入れる）
+                              if(arrReserve[y] == '') {
+                                  var formura = analysisSheet.getRange(a, y + 1).getFormula()
+                                  arrReserve[y] = formura
+                              }
+                            }
+
+                            analysisSheet.getRange(a, 1, 1, lastCol).setValues([arrReserve]);
+                            break loop;
+                            }
+                          }
+                        }
+                      else if(n == reserveNumbers.length - 1){
+                        console.log("キャンセルされたご予約の予約番号がありませんでした。");
+
+                        for (let y = 0; y < arrReserve.length; y++) {
+                          // データ入ってなかったら元のデータ（関数を入れる）
+                          if(arrReserve[y] == '') {
+                              var formura = analysisSheet.getRange(newLastRow, y + 1).getFormula()
+                              arrReserve[y] = formura
+                          }
+                        }
+
+                        // 最終行にキャンセル予約挿入
+                        analysisSheet.getRange(newLastRow, 1, 1, lastCol).setValues([arrReserve]);
+
+                        // 電話対応履歴に追加
+                        setTel(reserve[reserveNumCol])
+                      }
+                    }
+
+                    // HPB_新規ラベルをつけてアーカイブ
+                    // message.getThread().addLabel(labelNew).markRead().moveToArchive();
+                    addLabel(labelNew, 'me', message.getId());      // ラベルを付与
+                    message.getThread().markRead().moveToArchive(); // 既読にして、アーカイブ
+                }
+            }
+
+        }
+
+      } // for文：messagesここまで
+    } // for文：threadsここまで
+};
+
+
+// メールの本文を整形し、必要項目をIDの順番に配列化する関数
+const arrGmailText2 = (gmailText, reserve, storeList) => {
+  // 宛名(1行目)から店舗を特定
+  const row1 = gmailText[0].replace("\r", "");
+  const rayroleIndex = row1.indexOf('】') + 1;
+  const matchStore = row1.slice(rayroleIndex, -1);
+  for(let y in storeList){
+    if(storeList[y].toString().match(matchStore)){
+      reserve[firstShopId] = storeList[y];
+      break;
+    }
+    else if(y == storeList.length - 1){
+      "";
+    }
+  }
+
+  for(let x in gmailText){ // メールのテキストを1行ずつチェック
+    gmailText[x].match("■予約番号") ? reserve[reserveNumCol] = (gmailText[Number(x) + 1].replace("\r", "").replace(' ', '').replace('　', '')) : "";
+
+    if(gmailText[x].match("■来店日時")) {
+      var date = gmailText[Number(x) + 1].replace("\r", "").replace('　', '').replace("（", "(").replace("）", ") ").replace("年", "/").replace("月", "/").replace("日", "")
+      reserve[firstReserveDay] = new Date(date)
+    }
+
+    if(gmailText[x].match("■氏名")){
+      const kanjiKanaName =  gmailText[Number(x) +1].replace("\r", ""); // ふりがなつきの名前
+      const kakkoIndex = kanjiKanaName.indexOf("（")                     // （ のインデックス
+      const name = kanjiKanaName.substring(0, kakkoIndex)
+      reserve[cusName] = name.replace('　', '')
+    }
+  }
+
+  return reserve;
+};
+
+// Gmail APIを使いラベル一覧を取得
+const listLabels = () => {
+  var labels = Gmail.Users.Labels.list('me');
+  return labels
+}
+
+// Gmail APIを使いラベルを付与
+const addLabel = (labelId, userId, messageId) => {
+  var resource = {addLabelIds: [labelId]}
+  Gmail.Users.Messages.modify(resource, userId, messageId);
+}

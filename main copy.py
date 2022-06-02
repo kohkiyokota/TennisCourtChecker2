@@ -1,4 +1,3 @@
-from copyreg import constructor
 from curses.ascii import NUL
 from pty import slave_open
 from xml.etree.ElementPath import xpath_tokenizer
@@ -15,7 +14,7 @@ from selenium.webdriver.chrome import service
 
 import time
 from datetime import datetime, date, timedelta
-import jpholiday
+# import jpholiday
 
 from datetime import datetime as dt
 import calendar
@@ -57,8 +56,6 @@ TOKEN = configSheet.acell('C14').value
 LNT_FOR_ERROR = configSheet.acell('C15').value
 
 result = []
-
-
 
 def writeSheet(data):
     worksheet.delete_rows(2) # 1行目(空き状況)を削除
@@ -182,18 +179,6 @@ def generateText(n, startIndex, i, month, day, dow, num):
       if startIndex + i == 9:
           startTime = '16'
           endTime = '17'
-      if startIndex + i == 10:
-          startTime = '17'
-          endTime = '18'
-      if startIndex + i == 11:
-          startTime = '18'
-          endTime = '19'
-      if startIndex + i == 12:
-          startTime = '19'
-          endTime = '20'
-      if startIndex + i == 13:
-          startTime = '20'
-          endTime = '21'
 
       # ソート用に月と日を2桁にする
       if int(month) < 10:
@@ -309,27 +294,6 @@ def main():
             today_day = int(today_day)
             print(today_day)
 
-
-            # 祝日 ##################################################################
-            this_holidays = []
-            next_holidays = []
-
-            # もし曜日指定に「祝日」が入っていたら
-            # 今月の祝日を取得
-            for hl1 in jpholiday.month_holidays(today_year, today_month):
-              this_holidays.append(hl1[0].day)
-
-            # 来月の祝日を取得 
-            if today_month == 12:
-                next_month = 1
-                next_year = today_year + 1
-            else:
-                next_month = today_month + 1
-                next_year = today_year
-            for hl2 in jpholiday.month_holidays(next_year, next_month):
-              next_holidays.append(hl2[0].day)
-            # ########################################################################
-
             if today_day < 10:
                 print('今月まで')
                 until_month = today_month
@@ -353,18 +317,6 @@ def main():
                 dow = date[12:13]
 
                 print(date)
-                print(dow)
-                print(this_holidays)
-                print(day)
-
-                lastholiday = False
-                if day in this_holidays:
-                    dow += "祝"
-
-                    if day == this_holidays[-1]:
-                        print('その月の最後の祝日')
-                        lastholiday = True
-
 
                 # 範囲ないか計算
                 if  until_month < month:
@@ -373,28 +325,25 @@ def main():
                   else:
                       break
 
-                if '祝' in dow:
-                    start = int(HOL.split('-')[0])
-                    end = int(HOL.split('-')[1])
-                elif '日' in dow:
+                if dow == '日':
                     start = int(SUN.split('-')[0])
                     end = int(SUN.split('-')[1])
-                elif '月' in dow:
+                if dow == '月':
                     start = int(MON.split('-')[0])
                     end = int(MON.split('-')[1])
-                elif '火' in dow:
+                if dow == '火':
                     start = int(TUE.split('-')[0])
                     end = int(TUE.split('-')[1])
-                elif '水' in dow:
+                if dow == '水':
                     start = int(WED.split('-')[0])
                     end = int(WED.split('-')[1])
-                elif '木' in dow:
+                if dow == '木':
                     start = int(THU.split('-')[0])
                     end = int(THU.split('-')[1])
-                elif '金' in dow:
+                if dow == '金':
                     start = int(FRI.split('-')[0])
                     end = int(FRI.split('-')[1])
-                elif '土' in dow:
+                if dow == '土':
                     start = int(SAT.split('-')[0])
                     end = int(SAT.split('-')[1])
 
@@ -403,74 +352,61 @@ def main():
                 if startIndex < 1:
                     startIndex = 1
                 endIndex = startIndex + (end - start) - 1
-                if endIndex > 13:
-                    endIndex = 13
-
-                print(f'{startIndex}-{endIndex}')
-
-                cols10 = driver.find_elements(by=By.XPATH, value='//*[@id="td10_10"]')
-                cols11 = driver.find_elements(by=By.XPATH, value='//*[@id="td10_11"]')
-                cols12 = driver.find_elements(by=By.XPATH, value='//*[@id="td10_12"]')
-                cols13 = driver.find_elements(by=By.XPATH, value='//*[@id="td10_13"]')
-
-                cols = 9
-
-                if len(cols13) > 0:
-                    cols = 13
-                elif len(cols12) > 0:
-                    cols = 12
-                elif len(cols11) > 0:
-                    cols = 11
-                elif len(cols10) > 0:
-                    cols = 10
-
-                print(cols)
-
-                if endIndex < cols:
-                    cols = endIndex
+                if endIndex > 9:
+                    endIndex = 9
 
                 # テーブルのセルの情報を取得
                 for n in range(7):
-                    for i2 in range(cols - startIndex + 1):
+                    for i2 in range(endIndex - startIndex + 1):
                         checkRows = len(getElementsByTag('thead', 20, 3))
 
                         if checkRows == 2:
-                            cell_text = getElement(f'//*[@id="td1{n + 1}_{startIndex + i2}"]', 20, 3).get_attribute("textContent")
-                            if cell_text != 'Ｘ':
-                                img = driver.find_elements(By.XPATH, f'//*[@id="td1{n + 1}_{startIndex + i2}"]/a/img')
-                                # img = getElements2(f'//*[@id="td1{n + 1}_{startIndex + i2}"]/a/img', 0, 3)
-                                if len(img) > 0:
-                                    num = img[0].get_attribute('src')[-5:-4] # 空きコート数
-                                    print(num)
+                            # 最後じゃなかったら
+                            if i2 + 1 != endIndex - startIndex + 1:
+                                cell_text = getElement(f'//*[@id="td1{n + 1}_{startIndex + i2}"]', 20, 3).text
+                                if cell_text != 'Ｘ':
+                                    img = getElement(f'//*[@id="td1{n + 1}_{startIndex + i2}"]/a/img', 20, 3)
+                                    num = img.get_attribute('src')[-5:-4] # 空きコート数
                                     r = generateText(n, startIndex, i2, month, day, dow, num)
                                     result.append(r)
-
+                            # 最後だったら（スクロールが必要だから取得方法が違う）
+                            else:
+                                cell_text = getElement(f'//*[@id="td1{n + 1}_{startIndex + i2}"]', 20, 3).get_attribute("textContent")
+                                if cell_text != 'Ｘ':
+                                    img = getElement(f'//*[@id="td1{n + 1}_{startIndex + i2}"]/a/img', 20, 3)
+                                    num = img.get_attribute('src')[-5:-4] # 空きコート数
+                                    r = generateText(n, startIndex, i2, month, day, dow, num)
+                                    result.append(r)
                         else:
+                            # 要修正
                             # 最後じゃなかったら
                             tyousei = 0
                             if n == 1:
                                 tyousei = 1
                             elif n > 1:
                                 tyousei = 2
-
-                            cell_text = getElement(f'//*[@id="td1{n + tyousei + 1}_{startIndex + i2}"]', 20, 3).get_attribute("textContent")
-                            if cell_text != 'Ｘ':
-                                img = driver.find_elements(By.XPATH, f'//*[@id="td1{n + tyousei + 1}_{startIndex + i2}"]/a/img')
-                                if len(img) > 0:
-                                    num = img[0].get_attribute('src')[-5:-4] # 空きコート数
-                                    print(num)
+                            if i2 + 1 != endIndex - startIndex + 1:
+                                cell_text = getElement(f'//*[@id="td1{n + tyousei + 1}_{startIndex + i2}"]', 20, 3).text
+                                if cell_text != 'Ｘ':
+                                    img = getElement(f'//*[@id="td1{n + tyousei + 1}_{startIndex + i2}"]/a/img', 20, 3)
+                                    num = img.get_attribute('src')[-5:-4] # 空きコート数
+                                    r = generateText(n, startIndex, i2, month, day, dow, num)
+                                    result.append(r)
+                            # 最後だったら（スクロールが必要だから取得方法が違う）
+                            else:
+                                cell_text = getElement(f'//*[@id="td1{n + tyousei + 1}_{startIndex + i2}"]', 20, 3).get_attribute("textContent")
+                                if cell_text != 'Ｘ':
+                                    img = getElement(f'//*[@id="td1{n + tyousei + 1}_{startIndex + i2}"]/a/img', 20, 3)
+                                    num = img.get_attribute('src')[-5:-4] # 空きコート数
                                     r = generateText(n, startIndex, i2, month, day, dow, num)
                                     result.append(r)
 
                 next_btn = getElements(f'//*[@id="contents"]/div[2]/div/ul/li[2]/a[1]', 20, 3)
                 if len(next_btn) > 0:
-                    # 月の最後の日だったら...（styleで非表示になっていたら）
                     next_btn_style = next_btn[0].get_attribute("style")
                     if len(next_btn_style) > 0:
                         break
                     else:
-                        if lastholiday:
-                            this_holidays = next_holidays
                         next_btn[0].click()
                 else:
                     break
@@ -560,11 +496,11 @@ def main():
             # traceback.print_exc()
             print(e)
             # driver.quit()
-            # if i == 2:
-            err_title = e.__class__.__name__ # エラータイトル
-            message = f'\n【江東】\n\n例外発生！\n\n{err_title}\n{e.args}'
-            send_line_notify(message, LNT_FOR_ERROR)
-            # pass
+            if i == 2:
+                err_title = e.__class__.__name__ # エラータイトル
+                message = f'\n【江東】\n\n例外発生！\n\n{err_title}\n{e.args}'
+                send_line_notify(message, LNT_FOR_ERROR)
+            pass
 
         else: # 例外が発生しなかった時だけ実行される
             break  # 失敗しなかった時はループを抜ける
@@ -593,9 +529,10 @@ if __name__ == "__main__":
             UA = 'SetEnvIfNoCase User-Agent "NaverBot" getout'
             options.add_argument(f'user-agent={UA}')
 
+            # driver = webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=options)
             chrome_service = service.Service(executable_path=ChromeDriverManager().install())
             driver = webdriver.Chrome(service=chrome_service, options=options) 
-            # driver.implicitly_wait(60)
+            driver.implicitly_wait(60)
             main()
             driver.delete_all_cookies()
             driver.close()
@@ -603,6 +540,3 @@ if __name__ == "__main__":
 
         except IOError:
             print('process already exists')
-
-
-
